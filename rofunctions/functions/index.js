@@ -13,11 +13,13 @@ admin.initializeApp(functions.config().firebase);
   Eventos de calificación 
 ------------------------------------*/
 
-exports.sendQualificationNotificationCorus = functions.database.ref('/user-posts/{postId}/{result}').onWrite(event =>{
+exports.sendQualificationNotificationCorus = functions.database.ref('/user-posts/{postId}/').onWrite(event =>{
 	const postId = event.params.postId;
 
-	console.log("PostId: "+postId);
-	console.log("Event Data" + event.data.val());
+	if (!event.data.previous.exists()) {
+        return;
+    }
+
 
   if (!event.data.val()) {
     return console.log('PostId '+postId);
@@ -40,9 +42,10 @@ exports.sendQualificationNotificationCorus = functions.database.ref('/user-posts
       const payload = {
         'data': 
             {
-              'title': "Nueva Calificación",
-              'body':'La publicación que has realizado ha sido revisada por nuestros profesionales,la tienes disponible en tus items',
-              'type':'Qualification'
+              'title': "Publicaciones CoRus",
+              'body':'Una publicación a la que estás vinculado tiene actualizaciones',
+              'type':'detail',
+              'data': postId
             }
       };
 
@@ -73,11 +76,12 @@ exports.sendQualificationNotificationCorus = functions.database.ref('/user-posts
   });
 });
 
-exports.sendQualificationNotificationCocono = functions.database.ref('/user-posts-reflexive/{postId}/{result}').onWrite(event =>{
+exports.sendQualificationNotificationCocono = functions.database.ref('/user-posts-reflexive/{postId}/').onWrite(event =>{
   const postId = event.params.postId;
 
-  console.log("PostId: "+postId);
-  console.log("Event Data" + event.data.val());
+  if (!event.data.previous.exists()) {
+        return;
+    }
 
   if (!event.data.val()) {
     return console.log('PostId '+postId);
@@ -100,9 +104,10 @@ exports.sendQualificationNotificationCocono = functions.database.ref('/user-post
       const payload = {
         'data': 
             {
-              'title': "Nueva Calificación",
-              'body':'La publicación que has realizado ha sido revisada por nuestros profesionales,la tienes disponible en tus items',
-              'type':'Qualification'
+              'title': "Publicaciones CoCono",
+              'body':'Una publicación a la que estás vinculado tiene actualizaciones',
+              'type':'detail',
+              'data': postId
             }
       };
 
@@ -136,7 +141,7 @@ exports.sendQualificationNotificationCocono = functions.database.ref('/user-post
 /*----------------------------------
   Eventos de comentarios 
 ------------------------------------*/
-exports.sendCommentsNotificationCorus = functions.database.ref('/user-comments/{postId}').onWrite(event =>{
+exports.sendCommentsNotificationCoCono = functions.database.ref('/user-comments-reflexive/{postId}').onWrite(event =>{
   const commentId = event.params.postId;
 
   console.log("PostId: "+commentId);
@@ -147,7 +152,7 @@ exports.sendCommentsNotificationCorus = functions.database.ref('/user-comments/{
 
   const postId = event.data["_newData"]["id"];
 
-  return admin.database().ref('/user-comments/'+postId).once('value').then(snapshot => {
+  return admin.database().ref('/user-comments-reflexive/'+postId).once('value').then(snapshot => {
      if (!snapshot.exists()) {
           console.log('Post not found:', postId);
           return;
@@ -162,9 +167,10 @@ exports.sendCommentsNotificationCorus = functions.database.ref('/user-comments/{
       const payload = {
         'data': 
             {
-              'title': "Nuevo Comentario CoRus",
-              'body':'Una de tus publicaciones ha sido comentada, presiona para verlo',
-              'type':'Comment'
+              'title': "Nuevo Comentario CoCono",
+              'body':'Una publicación de la que haces parte ha sido comentada',
+              'type':'detail',
+              'data': postId
             }
       };
 
@@ -193,9 +199,20 @@ exports.sendCommentsNotificationCorus = functions.database.ref('/user-comments/{
         return Promise.all(tokensToRemove);
     });
   });
+});
 
+exports.sendCommentsNotificationCorus = functions.database.ref('/user-comments/{postId}').onWrite(event =>{
+  const commentId = event.params.postId;
 
-  /*return admin.database().ref('/user-posts/'+postId).once('value').then(snapshot => {
+  console.log("PostId: "+commentId);
+
+  if (!event.data.val()) {
+    return console.log('Comment id '+commentId);
+  }
+
+  const postId = event.data["_newData"]["id"];
+
+  return admin.database().ref('/user-comments/'+postId).once('value').then(snapshot => {
      if (!snapshot.exists()) {
           console.log('Post not found:', postId);
           return;
@@ -210,9 +227,10 @@ exports.sendCommentsNotificationCorus = functions.database.ref('/user-comments/{
       const payload = {
         'data': 
             {
-              'title': "Nuevo Comentario",
-              'body':'Han realizado un comentario sobre tu publicación',
-              'type':'Comment'
+              'title': "Nuevo Comentario CoRus",
+              'body':'Una de tus publicaciones ha sido comentada, presiona para verlo',
+              'type':'detail',
+              'data': postId
             }
       };
 
@@ -222,12 +240,12 @@ exports.sendCommentsNotificationCorus = functions.database.ref('/user-comments/{
       // Send notifications to all tokens.
       return admin.messaging().sendToDevice(tokens, payload).then(response => {
         // For each message check if there was an error.
-        console.log("Successfully comment sent message:", response);
+        console.log("Successfully sent message:", response);
 
         const tokensToRemove = [];
         response.results.forEach((result, index) => {
           const error = result.error;
-          if (error){
+          if (error) {
             console.error('Failure sending notification to', tokens[index], error);
             // Cleanup the tokens who are not registered anymore.
             if (error.code === 'messaging/invalid-registration-token' ||
@@ -240,6 +258,9 @@ exports.sendCommentsNotificationCorus = functions.database.ref('/user-comments/{
         });
         return Promise.all(tokensToRemove);
     });
-  });*/
+  });
 });
 
+/*----------------------------------
+  Eventos de tips 
+------------------------------------*/
